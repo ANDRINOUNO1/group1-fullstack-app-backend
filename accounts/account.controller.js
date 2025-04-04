@@ -98,11 +98,18 @@ function registerSchema(req, res, next) {
 
 function register(req, res, next) {
     accountService.register(req.body, req.get('origin'))
-        .then(() => res.json({ message: "Registration successful, please check your email for verification instructions" }))
+        .then(({ message, verificationToken }) => {
+            res.json({
+                message: message || "Registration successful, please check your email for verification instructions",
+                verificationToken 
+            });
+        })
         .catch(next);
 }
 
-function verifyEmailSchema(req, res, next) {
+
+
+ function verifyEmailSchema(req, res, next) {
     const schema = Joi.object({
         token: Joi.string().required()
     });
@@ -110,10 +117,12 @@ function verifyEmailSchema(req, res, next) {
 }
 
 function verifyEmail(req, res, next) {
+    console.log("Received token:", req.body.token); 
     accountService.verifyEmail(req.body)
         .then(() => res.json({ message: "Verification successful, you can now login" }))
         .catch(next);
 }
+
 
 function forgotPasswordSchema(req, res, next) {
     const schema = Joi.object({

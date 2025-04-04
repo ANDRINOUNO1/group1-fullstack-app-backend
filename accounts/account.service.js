@@ -78,30 +78,41 @@ async function revokeToken({ token, ipAddress }) {
     await refreshToken.save();
 }
 
-async function register(params, origin) {
-    // validate
+async function register(params) {
+
     if (await db.Account.findOne({ where: { email: params.email } })) {
-        // send already registered error in email to prevent account enumeration
-        return await sendAlreadyRegisteredEmail(params.email, origin);
+        return {
+            message: 'Registration successful, but this email is already registered',
+            verificationToken: null 
+        };
     }
 
-    // create account object
+    // Create account object
     const account = new db.Account(params);
 
-    // first registered account is an admin
+    // Generate verification token
+    const verificationToken = randomTokenString();
+    account.verificationToken = verificationToken;
+
+    // First registered account is an admin
     const isFirstAccount = (await db.Account.count()) === 0;
     account.role = isFirstAccount ? Role.Admin : Role.User;
-    account.verificationToken = randomTokenString();
 
-    // hash password
+    // Hash password
     account.passwordHash = await hash(params.password);
 
-    // save account
+    // Save account
     await account.save();
 
-    // send email
-    await sendVerificationEmail(account, origin);
+    // Return success message and verification token
+    return {
+        message: "Registration successful, use this token for verification",
+        verificationToken 
+    };
 }
+
+
+
 
 async function verifyEmail({ token }) {
     const account = await db.Account.findOne({ where: { verificationToken: token } });
